@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-server
+  namespace: cpu-infer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      tolerations:
+        - key: "node.kubernetes.io/disk-pressure"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: ollama-server
+          image: quay.io/pmukhedk/ollama-ubi9@sha256:ee6f2e00195e44fabe05fe962e2aba7ba0b86154614886be69b4b82570b9f433
+          ports:
+            - containerPort: 11434
+              protocol: TCP
+          resources:
+            limits:
+              memory: "64Gi"
+              cpu: "24"
+              ephemeral-storage: 60Gi
+            requests:
+              memory: "8Gi"
+              cpu: "2"
+              ephemeral-storage: 50Gi
+          volumeMounts:
+            - mountPath: "/root/.ollama"
+              name: llama-storage
+      volumes:
+        - name: llama-storage
+          persistentVolumeClaim:
+            claimName: llama-pvc
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
